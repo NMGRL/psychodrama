@@ -19,25 +19,46 @@
 # ============= local library imports  ==========================
 
 
-def sim():
-    from simulator import Simulator
-    s = Simulator()
-    s.bootstrap()
+class PreRunException(BaseException):
+    pass
 
 
-def pd():
-    from psychodrama import PsychoDrama
-    p = PsychoDrama()
-    p.bootstrap()
+class RunException(BaseException):
+    pass
 
 
-if __name__ == '__main__':
-    import sys
+class PostRunException(BaseException):
+    pass
 
-    func = sys.argv[1]
-    func = {'sim': sim, 'pd': pd}.get(func, pd)
-    if func:
-        func()
+
+class PsychoDramaRunner:
+    def run(self, config):
+        if not self._pre_run(config):
+            raise PreRunException()
+
+        if not self._run(config):
+            raise RunException()
+
+        if not self._post_run(config):
+            raise PostRunException()
+
+    def _pre_run(self, config):
+        c = config.get('pre_run', [])
+        for step in c:
+            pass
+
+    def _run(self, config):
+        c = config.get('run', [])
+        for step in c:
+            pass
+
+    def _post_run(self, config):
+        c = config.get('post_run', [])
+        for step in c:
+            pass
 
 
 # ============= EOF =============================================
+
+
+
