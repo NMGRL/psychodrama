@@ -22,11 +22,18 @@ import argparse
 
 def pd(arg_space):
     from psychodrama import bootstrap
-    bootstrap(port=arg_space.port, debug=arg_space.debug)
+    bootstrap(host=arg_space.host,
+              port=arg_space.port,
+              debug=arg_space.debug)
 
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser(description='Run PsychoDrama')
+
+    parser.add_argument('--host',
+                        type=str,
+                        default='127.0.0.1',
+                        help='host for Flask')
     parser.add_argument('--port',
                         type=int,
                         default=4567,
