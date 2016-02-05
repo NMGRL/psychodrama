@@ -6,21 +6,26 @@
 </head>
 <body>
 <h1>Results</h1>
-<table border="1">
-    {% for result in results %}
-    <tr>
-        <th>Start Date/Time</th>
-        <th>Duration</th>
-        <th>Status</th>
-        <th>Result</th>
-    </tr>
-    <tr>
-        <td>result.date</td>
-        <td>result.duration</td>
-        <td>result.status</td>
-        <td>result.result</td>
-    </tr>
-    {% endfor %}
-</table>
+{% if results %}
+    <table border="1">
+        {% for result in results %}
+        <tr>
+            <th>Start Date/Time</th>
+            <th>Duration</th>
+            <th>Status</th>
+            <th>Result</th>
+        </tr>
+        <tr>
+            <td>result.date</td>
+            <td>result.duration</td>
+            <td>result.status</td>
+            <td>result.result</td>
+        </tr>
+        {% endfor %}
+    </table>
+{% else %}
+    <h2>No Results</h2>
+{% endif %}
+
 </body>
 </html>

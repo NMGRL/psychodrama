@@ -17,27 +17,26 @@
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
+import argparse
 
 
-def sim():
-    from simulator import Simulator
-    s = Simulator()
-    s.bootstrap()
-
-
-def pd():
-    from psychodrama import PsychoDrama
-    p = PsychoDrama()
-    p.bootstrap()
+def pd(arg_space):
+    from psychodrama import bootstrap
+    bootstrap(port=arg_space.port, debug=arg_space.debug)
 
 
 if __name__ == '__main__':
-    import sys
+    parser = argparse.ArgumentParser(description='Run PsychoDrama')
+    parser.add_argument('--port',
+                        type=int,
+                        default=4567,
+                        help='port for Flask')
+    parser.add_argument('--debug',
+                        action='store_true',
+                        default=False,
+                        help='run in debug mode')
 
-    func = sys.argv[1]
-    func = {'sim': sim, 'pd': pd}.get(func, pd)
-    if func:
-        func()
+    pd(parser.parse_args())
 
 
 # ============= EOF =============================================

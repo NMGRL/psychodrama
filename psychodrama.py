@@ -50,10 +50,13 @@ def webhook_blueprint(branches=None):
             for b in branches:
                 bb = 'refs/heads/{}'.format(b)
                 if re.match(bb, ref):
-                    start_new_run(data)
+                    runner = PsychoDramaRunner()
+                    runner.bootstrap(data)
                     break
         else:
-            start_new_run(data)
+            runner = PsychoDramaRunner()
+            runner.bootstrap(data)
+
         return ''
 
     return bp
@@ -69,97 +72,21 @@ def results_blueprint():
     return bp
 
 
-class RepoCTX(object):
-    def __init__(self, name, url, branch, depth=10):
-        self._url = url
-        self._branch = branch
-        self._depth = depth
+def bootstrap(**app_kwargs):
+    # start the flask web app
+    app = PsychoDramaApp('PsychoDrama')
 
-        root = os.path.join(os.path.expanduser('~'), '.psychodrama')
-        if not os.path.isdir(root):
-            os.mkdir(root)
+    @app.route('/')
+    def index():
+        return render_template('index.html')
 
-        root = os.path.join(root, 'repos')
-        if not os.path.isdir(root):
-            os.mkdir(root)
+    # setup blueprints
+    app.register_blueprint(webhook_blueprint(branches=['develop', 'release-*']))
+    app.register_blueprint(results_blueprint())
 
-        self._root = os.path.join(root, name)
+    # setup database
 
-    def __enter__(self):
-        # clone the repo
-        subprocess.check_call('git', 'clone', self._url,
-                              '--depth', self._depth,
-                              '--branch', self._branch, self._root)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        os.rmdir(self._root)
-
-
-def start_new_run(data):
-    ref = data['ref']
-    branch = ref.split('/')[-1]
-
-    repo = data['repository']
-    url = repo['clone_url']
-    name = repo['name']
-
-    with RepoCTX(name, url, branch):
-
-        try:
-            # pull updates
-            pull(branch)
-        except BaseException, e:
-            report('failed to pull {}. exception={}'.format(branch, e), data)
-            return
-        # run .psycho.yaml
-        try:
-            config = get_config()
-        except BaseException, e:
-            report('failed to get config from branch {}. exception={}'.format(branch, e), data)
-            return
-
-        try:
-            run(config)
-        except BaseException, e:
-            report('failed to run branch {}. exception={}'.format(branch, e), data)
-            return
-
-
-def pull(branch):
-    subprocess.check_call('git', 'checkout', branch)
-    subprocess.check_call('git', 'pull')
-
-
-def get_config():
-    config = {}
-    return config
-
-
-def run(config):
-    r = PsychoDramaRunner()
-    r.run(config)
-
-
-def report(msg, data):
-    # added report to database
-    pass
-
-
-class PsychoDrama:
-    def bootstrap(self):
-        # start the flask web app
-        app = PsychoDramaApp('PsychoDrama')
-
-        @app.route('/')
-        def index():
-            return render_template('index.html')
-
-        # setup blueprints
-        app.register_blueprint(webhook_blueprint(branches=['develop', 'release-*']))
-        app.register_blueprint(results_blueprint())
-
-        # setup database
-
-        app.run(port=4567, debug=True)
+    # run application
+    app.run(**app_kwargs)
 
 # ============= EOF =============================================
