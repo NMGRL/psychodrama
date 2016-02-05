@@ -18,8 +18,6 @@
 # ============= standard library imports ========================
 import os
 import re
-import subprocess
-
 from flask import Flask, Blueprint, request, render_template
 # ============= local library imports  ==========================
 
@@ -45,6 +43,7 @@ def webhook_blueprint(branches=None):
     def payload():
         data = request.get_json()
         ref = data.get('ref', '')
+        print 'payload received'
 
         if branches:
             for b in branches:
@@ -67,7 +66,12 @@ def results_blueprint():
 
     @bp.route('/results')
     def results():
-        return render_template('results.html', results=[])
+        results = []
+        if os.path.isfile('.results.txt'):
+            with open('.results.txt','r') as rfile:
+                results = [line for line in rfile]
+
+        return render_template('results.html', results=results)
 
     return bp
 
@@ -81,7 +85,7 @@ def bootstrap(**app_kwargs):
         return render_template('index.html')
 
     # setup blueprints
-    app.register_blueprint(webhook_blueprint(branches=['develop', 'release-*']))
+    app.register_blueprint(webhook_blueprint(branches=['develop', 'release-*', 'feature/*']))
     app.register_blueprint(results_blueprint())
 
     # setup database

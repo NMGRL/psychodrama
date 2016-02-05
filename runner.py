@@ -17,29 +17,38 @@
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
 import os
+import shutil
 import socket
 import subprocess
+
 # ============= local library imports  ==========================
+import yaml
+from git import Repo
 
 
 class SupportException(BaseException):
-    pass
+    def __str__(self):
+        return 'SupportException'
 
 
 class PreRunException(BaseException):
-    pass
+    def __str__(self):
+        return 'PreRunException'
 
 
 class RunException(BaseException):
-    pass
+    def __str__(self):
+        return 'RunException'
 
 
 class PostRunException(BaseException):
-    pass
+    def __str__(self):
+        return 'PostRunException'
 
 
 class NoEndpointException(BaseException):
-    pass
+    def __str__(self):
+        return 'NoEndpointException'
 
 
 class SupportCTX(object):
@@ -50,38 +59,14 @@ class SupportCTX(object):
         pass
 
     def __exit__(self, exc_type, exc_val, exc_tb):
-        os.rmdir(self._root)
-
-
-class RepoCTX(object):
-    def __init__(self, name, url, branch, depth=10):
-        self._url = url
-        self._branch = branch
-        self._depth = depth
-
-        root = os.path.join(os.path.expanduser('~'), '.psychodrama')
-        if not os.path.isdir(root):
-            os.mkdir(root)
-
-        root = os.path.join(root, 'repos')
-        if not os.path.isdir(root):
-            os.mkdir(root)
-
-        self._root = os.path.join(root, name)
-
-    def __enter__(self):
-        # clone the repo
-        subprocess.check_call('git', 'clone', self._url,
-                              '--depth', self._depth,
-                              '--branch', self._branch, self._root)
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        os.rmdir(self._root)
+        pass
 
 
 def report(msg, data):
     # added report to database
-    pass
+    print msg
+    with open('.results.txt', 'a') as afile:
+        afile.write(msg)
 
 
 class PsychoDramaRunner:
@@ -124,50 +109,89 @@ class PsychoDramaRunner:
     _support_root = None
 
     def bootstrap(self, data):
+        self._conda_root = '/anaconda'
+
         ref = data['ref']
-        branch = ref.split('/')[-1]
+        branch = '/'.join(ref.split('/')[2:])
 
         repo = data['repository']
         url = repo['clone_url']
         name = repo['name']
 
-        with RepoCTX(name, url, branch):
+        self._make_repo(name, url, branch)
 
-            try:
-                # pull updates
-                self._pull(branch)
-            except BaseException, e:
-                report('failed to pull {}. exception={}'.format(branch, e), data)
+        try:
+            # pull updates
+            self._pull(branch)
+        except BaseException, e:
+            report('failed to pull {}. exception={}'.format(branch, e), data)
+            return
+        # run .psycho.yaml
+        try:
+            config = self._get_config()
+            if config is None:
+                report('no .psycho.yaml file present', data)
                 return
-            # run .psycho.yaml
-            try:
-                config = self._get_config()
-            except BaseException, e:
-                report('failed to get config from branch {}. exception={}'.format(branch, e), data)
-                return
+        except BaseException, e:
+            report('failed to get config from branch {}. exception={}'.format(branch, e), data)
+            return
 
-            try:
-                self._exec(config)
-            except BaseException, e:
-                report('failed to run branch {}. exception={}'.format(branch, e), data)
-                return
+        try:
+            self._exec(config)
+        except BaseException, e:
+            import traceback
+            traceback.print_exc()
+            report('failed to run branch {}. exception={}'.format(branch, e), data)
+            return
+
+    def _make_repo(self, name, url, branch, depth=10):
+        root = os.path.join(os.path.expanduser('~'), '.psychodrama')
+        if not os.path.isdir(root):
+            os.mkdir(root)
+
+        root = os.path.join(root, 'repos')
+        if not os.path.isdir(root):
+            os.mkdir(root)
+
+        self._root = os.path.join(root, name)
+        if not os.path.isdir(self._root):
+            self._repo = Repo.clone_from(url, self._root, depth=depth, branch=branch)
+            # clone the repo
+            # subprocess.check_call(['git', 'clone', url,
+            #                        '--depth', str(depth),
+            #                        '--branch', branch, self._root])
+        else:
+            self._repo = Repo(self._root)
+            if branch not in self._repo.heads:
+                self._repo.create_head(branch)
+
+            head = getattr(self._repo.heads, branch)
+            head.checkout()
 
     def _pull(self, branch):
-        subprocess.check_call('git', 'checkout', branch)
-        subprocess.check_call('git', 'pull')
+        origin = self._repo.remotes['origin']
+        origin.pull(branch)
+
+        # print 'checkout', subprocess.check_output(['cd', self._root, ';', 'git', 'checkout', branch])
+        # print 'pull', subprocess.check_output(['cd', self._root, ';', 'git', 'pull', 'origin', branch])
 
     def _get_config(self):
-        config = {}
-        return config
+        p = os.path.join(self._root, '.psycho.yaml')
+        if os.path.isfile(p):
+            with open(p, 'r') as rfile:
+                config = yaml.load(rfile)
+            return config
 
     def _exec(self, config):
         self._endpoint = config.get('endpoint')
         if self._endpoint is None:
             raise NoEndpointException()
 
+        # setup conda environment
+        self._setup_env(config)
+
+        # setup support files
         if not self._support(config):
-            if self._support_root:
-                os.rmdir(self._support_root)
             raise SupportException()
 
         with SupportCTX(self._support_root):
@@ -179,6 +203,18 @@ class PsychoDramaRunner:
 
             if not self._post_run(config):
                 raise PostRunException()
+
+    def _setup_env(self, config):
+        env = config['environment']
+        try:
+            subprocess.check_call(
+                ['{}/bin/conda'.format(self._conda_root), 'create', '--yes', '-n', env['name'], 'python'])
+        except subprocess.CalledProcessError:
+            pass
+
+        ins = ['{}/bin/conda'.format(self._conda_root), 'install', '-n', env['name'], '--yes']
+        ins.extend(env['dependencies'])
+        subprocess.check_call(ins)
 
     def _support(self, config):
         home = os.path.expanduser('~')
@@ -209,32 +245,45 @@ class PsychoDramaRunner:
                 # this is a directory
                 os.mkdir(make_path(sd))
 
+        return True
+
     def _pre_run(self, config):
+        print '------------- Pre Run -------------'
         c = config.get('pre_run', [])
-        for step in c:
-            pass
+        return self._do_steps(c)
 
     def _run(self, config):
+        print '------------- Run -------------'
         c = config.get('run', [])
-        for step in c:
-            pass
+        return self._do_steps(c)
 
     def _post_run(self, config):
+        print '------------- Post Run -------------'
         c = config.get('post_run', [])
-        for step in c:
-            pass
+        return self._do_steps(c)
+
+    def _do_steps(self, steps):
+        for step in steps:
+            if ':' in step:
+                cmd, data = step.split(':')
+            else:
+                cmd, data = step, None
+
+            getattr(self, '_{}'.format(cmd))(data)
+
+        return True
 
     # actions
-    def _start_app(self):
+    def _start_app(self, data):
         pass
 
-    def _start_sim(self):
+    def _start_sim(self, data):
         pass
 
-    def _stop_sim(self):
+    def _stop_sim(self, data):
         pass
 
-    def _report_results(self):
+    def _report_results(self, data):
         pass
 
     def _send_action(self, action):
@@ -246,6 +295,3 @@ class PsychoDramaRunner:
         return resp
 
 # ============= EOF =============================================
-
-
-
