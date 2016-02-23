@@ -18,19 +18,7 @@
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
 import argparse
-import logging
 
-root = logging.getLogger()
-root.setLevel(logging.DEBUG)
-shandler = logging.StreamHandler()
-
-handlers = [shandler]
-NAME_WIDTH = 40
-gFORMAT = '%(name)-{}s: %(asctime)s %(levelname)-9s (%(threadName)-10s) %(message)s'.format(NAME_WIDTH)
-for hi in handlers:
-    hi.setLevel(logging.DEBUG)
-    hi.setFormatter(logging.Formatter(gFORMAT))
-    root.addHandler(hi)
 
 
 def pd(arg_space):
