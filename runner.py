@@ -271,6 +271,9 @@ class PsychoDramaRunner:
         if d:
             logger.debug('setup db')
             path = d['path']
+            if os.path.isfile(path):
+                os.remove(path)
+
             conn = sqlite3.connect(path)
             cursor = conn.cursor()
             for sql in d['sql']:
