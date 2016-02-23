@@ -277,7 +277,11 @@ class PsychoDramaRunner:
             conn = sqlite3.connect(path)
             cursor = conn.cursor()
             for sql in d['sql']:
-                cursor.execute(sql)
+                if ';' in sql:
+                    for si in sql.split(';'):
+                        cursor.execute(si)
+                else:
+                    cursor.execute(sql)
             conn.commit()
             conn.close()
 
