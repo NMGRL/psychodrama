@@ -47,7 +47,9 @@ def webhook_blueprint(branches=None):
     @bp.route('/payload', methods=['POST', 'GET'])
     def payload():
         # return 'asdfasdf'
+        print 'received payload'
         data = request.get_json()
+        print data
         ref = data.get('ref', '')
 
         if branches:
