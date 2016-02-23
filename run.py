@@ -35,9 +35,10 @@ for hi in handlers:
 
 def pd(arg_space):
     from psychodrama import bootstrap
-    bootstrap(host=arg_space.host,
-              port=arg_space.port,
-              debug=arg_space.debug)
+    app = bootstrap()
+    app.run(host=arg_space.host,
+            port=arg_space.port,
+            debug=arg_space.debug)
 
 
 if __name__ == '__main__':

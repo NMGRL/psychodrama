@@ -91,7 +91,7 @@ def setup_db():
     create_db()
 
 
-def bootstrap(**app_kwargs):
+def bootstrap():
     @app.route('/')
     def index():
         return render_template('index.html')
@@ -103,6 +103,6 @@ def bootstrap(**app_kwargs):
     # setup database
     setup_db()
     # run application
-    app.run(**app_kwargs)
-
+    # app.run(**app_kwargs)
+    return app
 # ============= EOF =============================================
