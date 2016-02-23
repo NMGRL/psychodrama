@@ -385,7 +385,8 @@ class PsychoDramaRunner:
         klass, port = map(str.strip, data.split(','))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', int(port)))
-        cmd = {'Valve': ('Open A', 'OK'), 'Laser': ('Enable', 'OK')}.get(klass)
+        cmd = {'Valve': ('Open A', 'OK'),
+               'Laser': ('Enable', 'OK')}.get(klass)
         if cmd:
             cmd, resp = cmd
             s.send(cmd)

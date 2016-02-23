@@ -39,8 +39,8 @@ class Simulator:
     def _load_configuration(self):
 
         for f, p in (('ValveFactory', 8000),
-                     ('SpectrometerFactory', 8001),
-                     ('LaserFactory', 8002)):
+                     ('LaserFactory', 8001),
+                     ('SpectrometerFactory', 8002)):
             mod = __import__('protocols', fromlist=[f])
             klass = getattr(mod, f)
             endpoint = TCP4ServerEndpoint(reactor, p)
