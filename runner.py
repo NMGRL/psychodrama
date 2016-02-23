@@ -87,6 +87,8 @@ values ({},'{}', '{}')'''.format(fid + 1, msg, datetime.now())
     cur.execute(sql)
     conn.commit()
 
+    logger.info(msg)
+
 
 class PsychoDramaRunner:
     """
