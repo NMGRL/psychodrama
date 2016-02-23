@@ -131,7 +131,18 @@ class PsychoDramaRunner:
         logger.info('bootstrap')
 
         self.processes = {}
-        self._conda_root = '/anaconda'
+
+        root = '/anaconda'
+        if not os.path.isdir(root):
+            root = os.path.join(os.path.expanduser('~'), 'anaconda')
+            if not os.path.isdir(root):
+                root = os.path.join(os.path.expanduser('~'), 'miniconda2')
+
+        if not os.path.isdir(root):
+            logger.warning('No conda available')
+            return
+
+        self._conda_root = root
 
         ref = data['ref']
         branch = '/'.join(ref.split('/')[2:])

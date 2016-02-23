@@ -16,6 +16,7 @@
 
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
+import logging
 import os
 import re
 
@@ -32,7 +33,6 @@ class PsychoDramaApp(Flask):
 
 app = PsychoDramaApp('PsychoDrama')
 
-
 def webhook_blueprint(branches=None):
     """
      if <branches> is None trigger handle webhooks for all branches
@@ -44,12 +44,14 @@ def webhook_blueprint(branches=None):
 
     bp = Blueprint('webhook', __name__)
 
+    logger = logging.getLogger('webhook')
     @bp.route('/payload', methods=['POST', 'GET'])
     def payload():
         # return 'asdfasdf'
-        print 'received payload'
+        logger.info('received payload')
         data = request.get_json()
-        print data
+        logger.debug(data)
+
         ref = data.get('ref', '')
 
         if branches:
@@ -63,7 +65,7 @@ def webhook_blueprint(branches=None):
             runner = PsychoDramaRunner()
             runner.bootstrap(data)
 
-        return ''
+        return 'OK'
 
     return bp
 
