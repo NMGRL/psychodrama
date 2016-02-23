@@ -348,7 +348,7 @@ class PsychoDramaRunner:
         name = data
         path = os.path.join(self._root, name)
 
-        process = subprocess.Popen(['python', path])
+        process = subprocess.Popen([os.path.join(self._conda_root, 'bin', 'python'), path])
         self.processes[name] = process.pid
 
         # wait until psychodrama plugin launches
