@@ -414,7 +414,11 @@ class PsychoDramaRunner:
 
     def _send_action(self, action):
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
-        s.connect(self._endpoint)
+        try:
+            s.connect(self._endpoint)
+        except BaseException:
+            return
+
         s.settimeout(0.5)
         s.write(action)
         resp = s.read(1024)
