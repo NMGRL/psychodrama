@@ -266,6 +266,10 @@ class PsychoDramaRunner:
         ins.extend(env['dependencies'])
         subprocess.check_call(ins)
 
+        pip = os.path.join(self._env_path, 'bin', 'pip')
+        for pp in env['pip']:
+            subprocess.check_call([pip, 'install', pp])
+
     def _setup_db(self, config):
         d = config.get('database')
         if d:
@@ -348,7 +352,10 @@ class PsychoDramaRunner:
         name = data
         path = os.path.join(self._root, name)
 
-        process = subprocess.Popen([os.path.join(self._conda_root, 'bin', 'python'), path])
+        os.environ['PYTHONPATH'] = self._root
+        process = subprocess.Popen([os.path.join(self._env_path, 'bin', 'python'),
+                                    path],
+                                   env=os.environ)
         self.processes[name] = process.pid
 
         # wait until psychodrama plugin launches
