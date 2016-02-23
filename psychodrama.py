@@ -18,6 +18,8 @@
 # ============= standard library imports ========================
 import os
 import re
+
+import sqlite3
 from flask import Flask, Blueprint, request, render_template
 # ============= local library imports  ==========================
 
@@ -26,6 +28,9 @@ from runner import PsychoDramaRunner
 
 class PsychoDramaApp(Flask):
     pass
+
+
+app = PsychoDramaApp('PsychoDrama')
 
 
 def webhook_blueprint(branches=None):
@@ -39,11 +44,11 @@ def webhook_blueprint(branches=None):
 
     bp = Blueprint('webhook', __name__)
 
-    @bp.route('/payload', methods=['POST'])
+    @bp.route('/payload', methods=['POST', 'GET'])
     def payload():
+        # return 'asdfasdf'
         data = request.get_json()
         ref = data.get('ref', '')
-        print 'payload received'
 
         if branches:
             for b in branches:
@@ -62,24 +67,31 @@ def webhook_blueprint(branches=None):
 
 
 def results_blueprint():
+    from models import ResultTbl
     bp = Blueprint('results', __name__, template_folder='templates')
 
     @bp.route('/results')
     def results():
-        results = []
-        if os.path.isfile('.results.txt'):
-            with open('.results.txt','r') as rfile:
-                results = [line for line in rfile]
+        rs = ResultTbl.query.order_by(ResultTbl.pub_date.desc())
+        rs = [{'date': ri.pub_date, 'msg': ri.msg, 'status': ri.status, 'duration': 0} for ri in rs]
+        print 'results', rs
+        # results = []
+        # if os.path.isfile('.results.txt'):
+        #     with open('.results.txt', 'r') as rfile:
+        #         results = [line for line in rfile]
 
-        return render_template('results.html', results=results)
+        return render_template('results.html', results=rs)
 
     return bp
 
 
-def bootstrap(**app_kwargs):
-    # start the flask web app
-    app = PsychoDramaApp('PsychoDrama')
+def setup_db():
+    app.config['SQLALCHEMY_DATABASE_URI'] = 'sqlite:////tmp/results.sqlite3'
+    from models import create_db
+    create_db()
 
+
+def bootstrap(**app_kwargs):
     @app.route('/')
     def index():
         return render_template('index.html')
@@ -89,7 +101,7 @@ def bootstrap(**app_kwargs):
     app.register_blueprint(results_blueprint())
 
     # setup database
-
+    setup_db()
     # run application
     app.run(**app_kwargs)
 

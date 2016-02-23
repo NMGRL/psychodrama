@@ -15,47 +15,24 @@
 # ===============================================================================
 
 # ============= enthought library imports =======================
-import logging
-
-
 # ============= standard library imports ========================
 # ============= local library imports  ==========================
-from twisted.internet import reactor
-from twisted.internet.endpoints import TCP4ServerEndpoint
+from flask.ext.sqlalchemy import SQLAlchemy
+
+from psychodrama import app
+
+db = SQLAlchemy(app)
 
 
-class Simulator:
-    def __init__(self):
-        self.logger = logging.getLogger('Simulator')
+def create_db():
+    db.create_all()
 
-    def bootstrap(self):
-        # load configuration
-        self._load_configuration()
 
-        # start reactor
-        self._start_reactor()
-
-    # private
-    def _load_configuration(self):
-
-        for f, p in (('ValveFactory', 8000),
-                     ('SpectrometerFactory', 8001),
-                     ('LaserFactory', 8002)):
-            mod = __import__('protocols', fromlist=[f])
-            klass = getattr(mod, f)
-            endpoint = TCP4ServerEndpoint(reactor, p)
-            endpoint.listen(klass())
-
-    def _start_reactor(self):
-        reactor.run()
-
-    def info(self, msg):
-        self.logger.info(msg)
-
-    def debug(self, msg):
-        self.logger.info(msg)
-
-    def warning(self, msg):
-        self.logger.info(msg)
+class ResultTbl(db.Model):
+    __tablename__ = 'ResultTbl'
+    id = db.Column(db.Integer, primary_key=True)
+    msg = db.Column(db.BLOB)
+    pub_date = db.Column(db.DateTime)
+    status = db.Column(db.String(80))
 
 # ============= EOF =============================================
