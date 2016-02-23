@@ -251,6 +251,9 @@ class PsychoDramaRunner:
         logger.debug('setup env')
         env = config['environment']
         conda = os.path.join(self._conda_root, 'bin', 'conda')
+
+        logger.debug('env name={}'.format(env['name']))
+        logger.debug('conda {}'.format(conda))
         try:
             subprocess.check_call(
                 [conda, 'create', '--yes', '-n', env['name'], 'python'])
