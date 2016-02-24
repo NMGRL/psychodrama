@@ -28,7 +28,8 @@ import sqlite3
 import yaml
 from datetime import datetime
 from git import Repo
-
+from threading import Thread
+import json
 # ============= local library imports  ==========================
 
 logger = logging.getLogger('PsychoDramaRunner')
@@ -347,22 +348,27 @@ class PsychoDramaRunner:
 
         return True
 
+
     # actions
     def _start_app(self, data):
         name = data
         path = os.path.join(self._root, name)
+        def func():
+            os.environ['PYTHONPATH'] = self._root
+            process = subprocess.Popen([os.path.join(self._env_path, 'bin', 'python'),
+                                        path],
+                                       env=os.environ)
+            self.processes[name] = process.pid
 
-        os.environ['PYTHONPATH'] = self._root
-        process = subprocess.Popen([os.path.join(self._env_path, 'bin', 'python'),
-                                    path],
-                                   env=os.environ)
-        self.processes[name] = process.pid
-
+        t = Thread(target=func)
+        t.setDaemon(True)
+        t.start()
         # wait until psychodrama plugin launches
         # timeout after 1 min
         st = time.time()
         while time.time() - st < 60:
-            resp = self._send_action('Status')
+            logger.info('Get Status')
+            resp = self._send_action('status')
             if resp == 'READY':
                 break
             time.sleep(1)
@@ -419,17 +425,26 @@ class PsychoDramaRunner:
         resp = self._send_action('ExecuteExperiment {}'.format(data))
         assert (resp == 'OK')
 
-    def _send_action(self, action):
+    def _send_action(self, command, **kw):
+        kw['command'] = command
+        action = json.dumps(kw)
+
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
+            logger.debug('connect to {}'.format(self._endpoint))
             s.connect(self._endpoint)
-        except BaseException:
+        except BaseException, e:
+            logger.critical(e)
             return
 
         s.settimeout(0.5)
-        s.write(action)
-        resp = s.read(1024)
+
+        cmd = '{:02X}{}'.format(len(action), action)
+        s.send(cmd)
+        resp = s.recv(1024)
         s.close()
+
+        logger.debug('Send Action {}==>{}'.format(cmd, resp))
         return resp
 
 # ============= EOF =============================================

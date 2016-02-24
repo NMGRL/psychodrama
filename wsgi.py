@@ -20,7 +20,7 @@
 from psychodrama import bootstrap
 app = bootstrap()
 
+if __name__=='__main__':
+    app.run(debug=True, host='129.138.12.131', port=8000)
+
 # ============= EOF =============================================
-
-
-
