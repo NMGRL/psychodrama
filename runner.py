@@ -358,6 +358,7 @@ class PsychoDramaRunner:
                     cursor.execute(sql)
             conn.commit()
             conn.close()
+            self.debug('setup db complete')
 
     def _support(self, config):
         self.debug('setup support')
@@ -388,7 +389,7 @@ class PsychoDramaRunner:
             else:
                 # this is a directory
                 os.mkdir(make_path(sd))
-
+        self.debug('setup support complete')
         return True
 
     def _pre_run(self, config):
@@ -415,6 +416,7 @@ class PsychoDramaRunner:
 
             getattr(self, '_{}'.format(cmd))(data)
 
+        self.debug('do steps complete')
         return True
 
     def _report(self, msg, data, st):
@@ -438,6 +440,7 @@ class PsychoDramaRunner:
 
     # actions
     def _start_app(self, data):
+        self.info('Starting App')
         name = data
         path = os.path.join(self._root, name)
         
@@ -463,6 +466,8 @@ class PsychoDramaRunner:
 
     def _start_sim(self, data):
         name = '{}_simulator.py'.format(data)
+        self.info('Starting Simulator {}'.format(name))
+
         path = os.path.join(os.path.dirname(__file__), name)
         process = subprocess.Popen(['python', path])
         self.processes[name] = process.pid
@@ -514,9 +519,7 @@ class PsychoDramaRunner:
         assert (resp == 'OK')
 
     def _send_action(self, command, **kw):
-        self.warning('asdfsdfsadf {}'.format(command))
-        self.debug('adddddddd {}'.format(command))
-        self.info('ffffffffffff {}'.format(command))
+        self.debug('send action command: {}'.format(command))
 
         kw['command'] = command
         action = json.dumps(kw)
@@ -527,9 +530,6 @@ class PsychoDramaRunner:
             s.connect(self._endpoint)
         except BaseException, e:
             self.critical(e)
-            self.warning('asdfsdfsadf')
-            self.debug('adddddddd')
-            self.info('ffffffffffff')
             return
 
         s.settimeout(0.5)
