@@ -71,7 +71,8 @@ class SupportCTX(object):
         pass
 
 
-def report(msg, data):
+def report(msg, data, st):
+    duration = time.time() - st
     conn = sqlite3.connect('/tmp/results.sqlite3')
     cur = conn.cursor()
 
@@ -82,8 +83,8 @@ def report(msg, data):
     except TypeError:
         fid = 1
 
-    sql = '''insert into resulttbl (id, msg, pub_date)
-values ({},'{}', '{}')'''.format(fid + 1, msg, datetime.now())
+    sql = '''insert into resulttbl (id, msg, pub_date, duration)
+values ({},'{}', '{}', '{}')'''.format(fid + 1, msg, datetime.now(), duration)
 
     cur.execute(sql)
     conn.commit()
@@ -131,6 +132,91 @@ class PsychoDramaRunner:
     _support_root = None
 
     def bootstrap(self, data):
+        t = Thread(target=self._bootstrap, args=(data,))
+        t.setDaemon(1)
+        t.start()
+
+    def shutdown(self):
+        logger.info('shutdown')
+        for k, v in self.processes.iteritems():
+            logger.debug('kill process {} ({})'.format(k, v))
+            subprocess.call(['kill', str(v)])
+
+    # private
+    def _bootstrap(self, data):
+        """
+        example data
+        {
+  "object_kind": "push",
+  "before": "95790bf891e76fee5e1747ab589903a6a1f80f22",
+  "after": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+  "ref": "refs/heads/master",
+  "checkout_sha": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+  "user_id": 4,
+  "user_name": "John Smith",
+  "user_email": "john@example.com",
+  "user_avatar": "https://s.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?s=8://s.gravatar.com/avatar/d4c74594d841139328695756648b6bd6?s=80",
+  "project_id": 15,
+  "project":{
+    "name":"Diaspora",
+    "description":"",
+    "web_url":"http://example.com/mike/diaspora",
+    "avatar_url":null,
+    "git_ssh_url":"git@example.com:mike/diaspora.git",
+    "git_http_url":"http://example.com/mike/diaspora.git",
+    "namespace":"Mike",
+    "visibility_level":0,
+    "path_with_namespace":"mike/diaspora",
+    "default_branch":"master",
+    "homepage":"http://example.com/mike/diaspora",
+    "url":"git@example.com:mike/diaspora.git",
+    "ssh_url":"git@example.com:mike/diaspora.git",
+    "http_url":"http://example.com/mike/diaspora.git"
+  },
+  "repository":{
+    "name": "Diaspora",
+    "url": "git@example.com:mike/diaspora.git",
+    "description": "",
+    "homepage": "http://example.com/mike/diaspora",
+    "git_http_url":"http://example.com/mike/diaspora.git",
+    "git_ssh_url":"git@example.com:mike/diaspora.git",
+    "visibility_level":0
+  },
+  "commits": [
+    {
+      "id": "b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
+      "message": "Update Catalan translation to e38cb41.",
+      "timestamp": "2011-12-12T14:27:31+02:00",
+      "url": "http://example.com/mike/diaspora/commit/b6568db1bc1dcd7f8b4d5a946b0b91f9dacd7327",
+      "author": {
+        "name": "Jordi Mallach",
+        "email": "jordi@softcatala.org"
+      },
+      "added": ["CHANGELOG"],
+      "modified": ["app/controller/application.rb"],
+      "removed": []
+    },
+    {
+      "id": "da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+      "message": "fixed readme",
+      "timestamp": "2012-01-03T23:36:29+02:00",
+      "url": "http://example.com/mike/diaspora/commit/da1560886d4f094c3e6c9ef40349f7d38b5d27d7",
+      "author": {
+        "name": "GitLab dev user",
+        "email": "gitlabdev@dv6700.(none)"
+      },
+      "added": ["CHANGELOG"],
+      "modified": ["app/controller/application.rb"],
+      "removed": []
+    }
+  ],
+  "total_commits_count": 4
+}
+
+        :param data:
+        :return:
+        """
+        st = time.time()
         logger.info('bootstrap')
 
         self.processes = {}
@@ -151,7 +237,7 @@ class PsychoDramaRunner:
         branch = '/'.join(ref.split('/')[2:])
 
         repo = data['repository']
-        url = repo['clone_url']
+        url = repo['url']
         name = repo['name']
 
         self._make_repo(name, url, branch)
@@ -159,16 +245,16 @@ class PsychoDramaRunner:
             # pull updates
             self._pull(branch)
         except BaseException, e:
-            report('failed to pull {}. exception={}'.format(branch, e), data)
+            report('failed to pull {}. exception={}'.format(branch, e), data, st)
             return
         # run .psycho.yaml
         try:
             config = self._get_config()
             if config is None:
-                report('no .psycho.yaml file present', data)
+                report('no .psycho.yaml file present', data, st)
                 return
         except BaseException, e:
-            report('failed to get config from branch {}. exception={}'.format(branch, e), data)
+            report('failed to get config from branch {}. exception={}'.format(branch, e), data, st)
             return
 
         try:
@@ -176,16 +262,10 @@ class PsychoDramaRunner:
         except BaseException, e:
             import traceback
             traceback.print_exc()
-            report('failed to run branch {}. exception={}'.format(branch, e), data)
+            report('failed to run branch {}. exception={}'.format(branch, e), data, st)
 
-        report('run succeeded', data)
+        report('run succeeded', data, st)
         self.shutdown()
-
-    def shutdown(self):
-        logger.info('shutdown')
-        for k, v in self.processes.iteritems():
-            logger.debug('kill process {} ({})'.format(k, v))
-            subprocess.call(['kill', str(v)])
 
     def _make_repo(self, name, url, branch, depth=10):
         logger.debug('make repo {}, {}, {}'.format(name, url, branch))

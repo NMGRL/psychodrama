@@ -8,17 +8,20 @@
 <h1>Results</h1>
 {% if results %}
     <table border="1">
-        {% for result in results %}
+
         <tr>
             <th>Start Date/Time</th>
-            <th>Duration</th>
+            <th>Duration (s)</th>
             <th>Status</th>
+            <th>Message</th>
             <th>Result</th>
         </tr>
+        {% for result in results %}
         <tr>
-            <td>{{ results.date }}</td>
+            <td>{{ result.date }}</td>
             <td>{{ result.duration }}</td>
             <td>{{ result.status }}</td>
+            <td>{{ result.msg }}</td>
             <td>{{ result.result }}</td>
         </tr>
         {% endfor %}

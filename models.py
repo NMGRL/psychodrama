@@ -34,5 +34,10 @@ class ResultTbl(db.Model):
     msg = db.Column(db.BLOB)
     pub_date = db.Column(db.DateTime)
     status = db.Column(db.String(80))
+    duration = db.Column(db.FLOAT)
+
+    @property
+    def fduration(self):
+        return '{:0.1f}'.format(self.duration)
 
 # ============= EOF =============================================

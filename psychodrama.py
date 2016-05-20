@@ -17,10 +17,7 @@
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
 import logging
-import os
 import re
-
-import sqlite3
 from flask import Flask, Blueprint, request, render_template
 # ============= local library imports  ==========================
 
@@ -33,6 +30,22 @@ class PsychoDramaApp(Flask):
 
 app = PsychoDramaApp('PsychoDrama')
 
+root_logger = logging.getLogger()
+webhook_logger = logging.getLogger('webhook')
+
+shandler = logging.StreamHandler()
+fhandler = logging.FileHandler('psychrodrama.log')
+
+handlers = [shandler, fhandler]
+NAME_WIDTH = 40
+gFORMAT = '%(name)-{}s: %(asctime)s %(levelname)-9s (%(threadName)-10s) %(message)s'.format(NAME_WIDTH)
+for hi in handlers:
+    hi.setLevel(logging.DEBUG)
+    hi.setFormatter(logging.Formatter(gFORMAT))
+    for l in (root_logger, webhook_logger):
+        l.addHandler(hi)
+
+
 def webhook_blueprint(branches=None):
     """
      if <branches> is None trigger handle webhooks for all branches
@@ -44,13 +57,12 @@ def webhook_blueprint(branches=None):
 
     bp = Blueprint('webhook', __name__)
 
-    logger = logging.getLogger('webhook')
     @bp.route('/payload', methods=['POST', 'GET'])
     def payload():
-        # return 'asdfasdf'
-        logger.info('received payload')
+
+        webhook_logger.info('received payload')
         data = request.get_json()
-        logger.debug(data)
+        webhook_logger.debug(data)
 
         ref = data.get('ref', '')
 
@@ -77,13 +89,8 @@ def results_blueprint():
     @bp.route('/results')
     def results():
         rs = ResultTbl.query.order_by(ResultTbl.pub_date.desc())
-        rs = [{'date': ri.pub_date, 'msg': ri.msg, 'status': ri.status, 'duration': 0} for ri in rs]
-        print 'results', rs
-        # results = []
-        # if os.path.isfile('.results.txt'):
-        #     with open('.results.txt', 'r') as rfile:
-        #         results = [line for line in rfile]
 
+        rs = [{'date': ri.pub_date, 'msg': ri.msg, 'status': ri.status, 'duration': ri.fduration} for ri in rs]
         return render_template('results.html', results=rs)
 
     return bp
@@ -96,20 +103,6 @@ def setup_db():
 
 
 def bootstrap():
-    import logging
-
-    root = logging.getLogger()
-    root.setLevel(logging.DEBUG)
-    shandler = logging.StreamHandler()
-
-    handlers = [shandler]
-    NAME_WIDTH = 40
-    gFORMAT = '%(name)-{}s: %(asctime)s %(levelname)-9s (%(threadName)-10s) %(message)s'.format(NAME_WIDTH)
-    for hi in handlers:
-        hi.setLevel(logging.DEBUG)
-        hi.setFormatter(logging.Formatter(gFORMAT))
-        root.addHandler(hi)
-
     @app.route('/')
     def index():
         return render_template('index.html')
@@ -120,7 +113,5 @@ def bootstrap():
 
     # setup database
     setup_db()
-    # run application
-    # app.run(**app_kwargs)
     return app
 # ============= EOF =============================================
