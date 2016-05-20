@@ -29,6 +29,7 @@ from git import Repo
 from threading import Thread
 # ============= local library imports  ==========================
 logger = logging.getLogger('psychodrama_runner')
+logger.setLevel(logging.DEBUG)
 
 
 class SupportException(BaseException):

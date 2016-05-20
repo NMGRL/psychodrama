@@ -31,6 +31,7 @@ class PsychoDramaApp(Flask):
 app = PsychoDramaApp('PsychoDrama')
 
 root_logger = logging.getLogger()
+root_logger.setLevel(logging.DEBUG)
 
 shandler = logging.StreamHandler()
 fhandler = logging.FileHandler('psychodrama.log')
@@ -55,6 +56,7 @@ def webhook_blueprint(branches=None):
 
     bp = Blueprint('webhook', __name__)
     webhook_logger = logging.getLogger('webhook')
+    webhook_logger.setLevel(logging.DEBUG)
 
     @bp.route('/payload', methods=['POST', 'GET'])
     def payload():
