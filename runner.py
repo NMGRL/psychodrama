@@ -513,6 +513,10 @@ class PsychoDramaRunner:
         assert (resp == 'OK')
 
     def _send_action(self, command, **kw):
+        self.warning('asdfsdfsadf {}'.format(command))
+        self.debug('adddddddd {}'.format(command))
+        self.info('ffffffffffff {}'.format(command))
+
         kw['command'] = command
         action = json.dumps(kw)
 
@@ -523,6 +527,8 @@ class PsychoDramaRunner:
         except BaseException, e:
             self.critical(e)
             self.warning('asdfsdfsadf')
+            self.debug('adddddddd')
+            self.info('ffffffffffff')
             return
 
         s.settimeout(0.5)
