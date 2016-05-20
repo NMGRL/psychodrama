@@ -34,7 +34,7 @@ root_logger = logging.getLogger()
 root_logger.setLevel(logging.DEBUG)
 
 shandler = logging.StreamHandler()
-fhandler = logging.FileHandler('psychodrama.log')
+fhandler = logging.FileHandler('psychodrama.log', mode='w')
 
 handlers = [shandler, fhandler]
 NAME_WIDTH = 40
