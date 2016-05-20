@@ -16,23 +16,17 @@
 
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
-import logging
 import os
-
 import socket
 import subprocess
-
 import time
-
 import sqlite3
 import yaml
+import json
 from datetime import datetime
 from git import Repo
 from threading import Thread
-import json
 # ============= local library imports  ==========================
-
-logger = logging.getLogger('PsychoDramaRunner')
 
 
 class SupportException(BaseException):
@@ -70,26 +64,6 @@ class SupportCTX(object):
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
 
-
-def report(msg, data, st):
-    duration = time.time() - st
-    conn = sqlite3.connect('/tmp/results.sqlite3')
-    cur = conn.cursor()
-
-    sql = '''select id from resulttbl ORDER by id desc'''
-    cur.execute(sql)
-    try:
-        fid = cur.fetchone()[0]
-    except TypeError:
-        fid = 1
-
-    sql = '''insert into resulttbl (id, msg, pub_date, duration)
-values ({},'{}', '{}', '{}')'''.format(fid + 1, msg, datetime.now(), duration)
-
-    cur.execute(sql)
-    conn.commit()
-
-    logger.info(msg)
 
 
 class PsychoDramaRunner:
@@ -130,16 +104,32 @@ class PsychoDramaRunner:
     """
 
     _support_root = None
+    
+    def __init__(self, logger):
+        self._logger = logger
+
+    def info(self, msg):
+        self._self.info(msg)
+
+    def debug(self, msg):
+        self._self.debug(msg)
+
+    def critical(self, msg):
+        self._logger.critical(msg)
+
+    def warning(self, msg):
+        self._logger.warning(msg)
 
     def bootstrap(self, data):
+        self.info('******************* Bootstrap')
         t = Thread(target=self._bootstrap, args=(data,))
         t.setDaemon(1)
         t.start()
 
     def shutdown(self):
-        logger.info('shutdown')
+        self.info('******************* Shutdown')
         for k, v in self.processes.iteritems():
-            logger.debug('kill process {} ({})'.format(k, v))
+            self.debug('kill process {} ({})'.format(k, v))
             subprocess.call(['kill', str(v)])
 
     # private
@@ -217,7 +207,7 @@ class PsychoDramaRunner:
         :return:
         """
         st = time.time()
-        logger.info('bootstrap')
+        self.info('bootstrap')
 
         self.processes = {}
 
@@ -228,7 +218,7 @@ class PsychoDramaRunner:
                 root = os.path.join(os.path.expanduser('~'), 'miniconda2')
 
         if not os.path.isdir(root):
-            logger.warning('No conda available')
+            self.warning('No conda available')
             return
 
         self._conda_root = root
@@ -245,16 +235,16 @@ class PsychoDramaRunner:
             # pull updates
             self._pull(branch)
         except BaseException, e:
-            report('failed to pull {}. exception={}'.format(branch, e), data, st)
+            self._report('failed to pull {}. exception={}'.format(branch, e), data, st)
             return
         # run .psycho.yaml
         try:
             config = self._get_config()
             if config is None:
-                report('no .psycho.yaml file present', data, st)
+                self._report('no .psycho.yaml file present', data, st)
                 return
         except BaseException, e:
-            report('failed to get config from branch {}. exception={}'.format(branch, e), data, st)
+            self._report('failed to get config from branch {}. exception={}'.format(branch, e), data, st)
             return
 
         try:
@@ -262,13 +252,13 @@ class PsychoDramaRunner:
         except BaseException, e:
             import traceback
             traceback.print_exc()
-            report('failed to run branch {}. exception={}'.format(branch, e), data, st)
+            self._report('failed to run branch {}. exception={}'.format(branch, e), data, st)
 
-        report('run succeeded', data, st)
+        self._report('run succeeded', data, st)
         self.shutdown()
 
     def _make_repo(self, name, url, branch, depth=10):
-        logger.debug('make repo {}, {}, {}'.format(name, url, branch))
+        self.debug('make repo {}, {}, {}'.format(name, url, branch))
 
         root = os.path.join(os.path.expanduser('~'), '.psychodrama')
         if not os.path.isdir(root):
@@ -290,12 +280,12 @@ class PsychoDramaRunner:
             head.checkout()
 
     def _pull(self, branch):
-        logger.debug('_pull')
+        self.debug('_pull')
         origin = self._repo.remotes['origin']
         origin.pull(branch)
 
     def _get_config(self):
-        logger.debug('get config')
+        self.debug('get config')
         p = os.path.join(self._root, '.psycho.yaml')
         if os.path.isfile(p):
             with open(p, 'r') as rfile:
@@ -303,7 +293,7 @@ class PsychoDramaRunner:
             return config
 
     def _exec(self, config):
-        logger.debug('_exec')
+        self.debug('_exec')
         self._endpoint = config.get('endpoint')
         if self._endpoint is None:
             raise NoEndpointException()
@@ -329,12 +319,12 @@ class PsychoDramaRunner:
                 raise PostRunException()
 
     def _setup_env(self, config):
-        logger.debug('setup env')
+        self.debug('setup env')
         env = config['environment']
         conda = os.path.join(self._conda_root, 'bin', 'conda')
 
-        logger.debug('env name={}'.format(env['name']))
-        logger.debug('conda {}'.format(conda))
+        self.debug('env name={}'.format(env['name']))
+        self.debug('conda {}'.format(conda))
         try:
             subprocess.check_call(
                 [conda, 'create', '--yes', '-n', env['name'], 'python'])
@@ -354,7 +344,7 @@ class PsychoDramaRunner:
     def _setup_db(self, config):
         d = config.get('database')
         if d:
-            logger.debug('setup db')
+            self.debug('setup db')
             path = d['path']
             if os.path.isfile(path):
                 os.remove(path)
@@ -371,7 +361,7 @@ class PsychoDramaRunner:
             conn.close()
 
     def _support(self, config):
-        logger.debug('setup support')
+        self.debug('setup support')
         home = os.path.expanduser('~')
 
         def r_mkdir(p):
@@ -403,17 +393,17 @@ class PsychoDramaRunner:
         return True
 
     def _pre_run(self, config):
-        logger.info('------------- Pre Run -------------')
+        self.info('------------- Pre Run -------------')
         c = config.get('pre_run', [])
         return self._do_steps(c)
 
     def _run(self, config):
-        logger.info('------------- Run -------------')
+        self.info('------------- Run -------------')
         c = config.get('run', [])
         return self._do_steps(c)
 
     def _post_run(self, config):
-        logger.info('------------- Post Run -------------')
+        self.info('------------- Post Run -------------')
         c = config.get('post_run', [])
         return self._do_steps(c)
 
@@ -428,11 +418,30 @@ class PsychoDramaRunner:
 
         return True
 
+    def _report(self, msg, data, st):
+        self.info("Result message={}".format(msg))
+        duration = time.time() - st
+        conn = sqlite3.connect('/tmp/results.sqlite3')
+        cur = conn.cursor()
+
+        sql = '''select id from resulttbl ORDER by id desc'''
+        cur.execute(sql)
+        try:
+            fid = cur.fetchone()[0]
+        except TypeError:
+            fid = 1
+
+        sql = '''insert into resulttbl (id, msg, pub_date, duration)
+        values ({},'{}', '{}', '{}')'''.format(fid + 1, msg, datetime.now(), duration)
+
+        cur.execute(sql)
+        conn.commit()
 
     # actions
     def _start_app(self, data):
         name = data
         path = os.path.join(self._root, name)
+        
         def func():
             os.environ['PYTHONPATH'] = self._root
             process = subprocess.Popen([os.path.join(self._env_path, 'bin', 'python'),
@@ -447,7 +456,7 @@ class PsychoDramaRunner:
         # timeout after 1 min
         st = time.time()
         while time.time() - st < 60:
-            logger.info('Get Status')
+            self.info('Get Status')
             resp = self._send_action('status')
             if resp == 'READY':
                 break
@@ -474,7 +483,7 @@ class PsychoDramaRunner:
         :param data:
         :return:
         """
-        logger.info('test simulator. data={}'.format(data))
+        self.info('test simulator. data={}'.format(data))
         klass, port = map(str.strip, data.split(','))
         s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         s.connect(('127.0.0.1', int(port)))
@@ -484,7 +493,7 @@ class PsychoDramaRunner:
             cmd, resp = cmd
             s.send(cmd)
             data = s.recv(4096)
-            logger.info('{} ==> {}, expected={}'.format(cmd, data, resp))
+            self.info('{} ==> {}, expected={}'.format(cmd, data, resp))
             s.close()
 
             assert (data.strip() == resp)
@@ -511,10 +520,10 @@ class PsychoDramaRunner:
 
         s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
-            logger.debug('connect to {}'.format(self._endpoint))
+            self.debug('connect to {}'.format(self._endpoint))
             s.connect(self._endpoint)
         except BaseException, e:
-            logger.critical(e)
+            self.critical(e)
             return
 
         s.settimeout(0.5)
@@ -524,7 +533,7 @@ class PsychoDramaRunner:
         resp = s.recv(1024)
         s.close()
 
-        logger.debug('Send Action {}==>{}'.format(cmd, resp))
+        self.debug('Send Action {}==>{}'.format(cmd, resp))
         return resp
 
 # ============= EOF =============================================

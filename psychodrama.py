@@ -32,6 +32,7 @@ app = PsychoDramaApp('PsychoDrama')
 
 root_logger = logging.getLogger()
 webhook_logger = logging.getLogger('webhook')
+psychodrama_logger = logging.getLogger('psychodrama')
 
 shandler = logging.StreamHandler()
 fhandler = logging.FileHandler('psychodrama.log')
@@ -70,11 +71,11 @@ def webhook_blueprint(branches=None):
             for b in branches:
                 bb = 'refs/heads/{}'.format(b)
                 if re.match(bb, ref):
-                    runner = PsychoDramaRunner()
+                    runner = PsychoDramaRunner(logger=psychodrama_logger)
                     runner.bootstrap(data)
                     break
         else:
-            runner = PsychoDramaRunner()
+            runner = PsychoDramaRunner(logger=psychodrama_logger)
             runner.bootstrap(data)
 
         return 'OK'
