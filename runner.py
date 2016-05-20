@@ -522,6 +522,7 @@ class PsychoDramaRunner:
             s.connect(self._endpoint)
         except BaseException, e:
             self.critical(e)
+            self.warning('asdfsdfsadf')
             return
 
         s.settimeout(0.5)
