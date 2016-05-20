@@ -34,7 +34,7 @@ root_logger = logging.getLogger()
 webhook_logger = logging.getLogger('webhook')
 
 shandler = logging.StreamHandler()
-fhandler = logging.FileHandler('psychrodrama.log')
+fhandler = logging.FileHandler('psychodrama.log')
 
 handlers = [shandler, fhandler]
 NAME_WIDTH = 40
