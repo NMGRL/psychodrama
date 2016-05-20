@@ -109,10 +109,10 @@ class PsychoDramaRunner:
         self._logger = logger
 
     def info(self, msg):
-        self._self.info(msg)
+        self._logger.info(msg)
 
     def debug(self, msg):
-        self._self.debug(msg)
+        self._logger.debug(msg)
 
     def critical(self, msg):
         self._logger.critical(msg)
