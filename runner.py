@@ -515,7 +515,7 @@ class PsychoDramaRunner:
         assert (resp == 'OK')
 
     def _execute_experiment(self, data):
-        resp = self._send_action('ExecuteExperiment', data)
+        resp = self._send_action('ExecuteExperiment', data=data)
         assert (resp == 'OK')
 
     def _send_action(self, command, **kw):
