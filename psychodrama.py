@@ -31,8 +31,6 @@ class PsychoDramaApp(Flask):
 app = PsychoDramaApp('PsychoDrama')
 
 root_logger = logging.getLogger()
-webhook_logger = logging.getLogger('webhook')
-psychodrama_logger = logging.getLogger('psychodrama')
 
 shandler = logging.StreamHandler()
 fhandler = logging.FileHandler('psychodrama.log')
@@ -43,8 +41,7 @@ gFORMAT = '%(name)-{}s: %(asctime)s %(levelname)-9s (%(threadName)-10s) %(messag
 for hi in handlers:
     hi.setLevel(logging.DEBUG)
     hi.setFormatter(logging.Formatter(gFORMAT))
-    for l in (root_logger, webhook_logger):
-        l.addHandler(hi)
+    root_logger.addHandler(hi)
 
 
 def webhook_blueprint(branches=None):
@@ -57,6 +54,7 @@ def webhook_blueprint(branches=None):
     """
 
     bp = Blueprint('webhook', __name__)
+    webhook_logger = logging.getLogger('webhook')
 
     @bp.route('/payload', methods=['POST', 'GET'])
     def payload():
@@ -71,11 +69,11 @@ def webhook_blueprint(branches=None):
             for b in branches:
                 bb = 'refs/heads/{}'.format(b)
                 if re.match(bb, ref):
-                    runner = PsychoDramaRunner(logger=psychodrama_logger)
+                    runner = PsychoDramaRunner()
                     runner.bootstrap(data)
                     break
         else:
-            runner = PsychoDramaRunner(logger=psychodrama_logger)
+            runner = PsychoDramaRunner()
             runner.bootstrap(data)
 
         return 'OK'

@@ -16,6 +16,7 @@
 
 # ============= enthought library imports =======================
 # ============= standard library imports ========================
+import logging
 import os
 import socket
 import subprocess
@@ -27,6 +28,7 @@ from datetime import datetime
 from git import Repo
 from threading import Thread
 # ============= local library imports  ==========================
+logger = logging.getLogger('psychodrama_runner')
 
 
 class SupportException(BaseException):
@@ -63,7 +65,6 @@ class SupportCTX(object):
 
     def __exit__(self, exc_type, exc_val, exc_tb):
         pass
-
 
 
 class PsychoDramaRunner:
@@ -104,21 +105,18 @@ class PsychoDramaRunner:
     """
 
     _support_root = None
-    
-    def __init__(self, logger):
-        self._logger = logger
 
     def info(self, msg):
-        self._logger.info(msg)
+        logger.info(msg)
 
     def debug(self, msg):
-        self._logger.debug(msg)
+        logger.debug(msg)
 
     def critical(self, msg):
-        self._logger.critical(msg)
+        logger.critical(msg)
 
     def warning(self, msg):
-        self._logger.warning(msg)
+        logger.warning(msg)
 
     def bootstrap(self, data):
         self.info('******************* Bootstrap')
